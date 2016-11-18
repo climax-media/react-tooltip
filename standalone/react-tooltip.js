@@ -49,6 +49,55 @@
 }());
 
 },{}],2:[function(require,module,exports){
+(function (root, factory) {
+  if (typeof define === "function" && define.amd) {
+    define([], factory);
+  } else if (typeof module === "object" && module.exports) {
+    module.exports = factory();
+  } else {
+    root.Scrollparent = factory();
+  }
+}(this, function () {
+  var regex = /(auto|scroll)/;
+
+  var parents = function (node, ps) {
+    if (node.parentNode === null) { return ps; }
+
+    return parents(node.parentNode, ps.concat([node]));
+  };
+
+  var style = function (node, prop) {
+    return getComputedStyle(node, null).getPropertyValue(prop);
+  };
+
+  var overflow = function (node) {
+    return style(node, "overflow") + style(node, "overflow-y") + style(node, "overflow-x");
+  };
+
+  var scroll = function (node) {
+   return regex.test(overflow(node));
+  };
+
+  var scrollParent = function (node) {
+    if (!(node instanceof HTMLElement || node instanceof SVGElement)) {
+      return ;
+    }
+
+    var ps = parents(node.parentNode, []);
+
+    for (var i = 0; i < ps.length; i += 1) {
+      if (scroll(ps[i])) {
+        return ps[i];
+      }
+    }
+
+    return document.body;
+  };
+
+  return scrollParent;
+}));
+
+},{}],3:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -63,7 +112,7 @@ exports.default = {
   }
 };
 
-},{}],3:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -81,9 +130,9 @@ exports.default = function (target) {
   target.prototype.customBindListener = function (ele) {
     var _this = this;
 
-    var _state = this.state;
-    var event = _state.event;
-    var eventOff = _state.eventOff;
+    var _state = this.state,
+        event = _state.event,
+        eventOff = _state.eventOff;
 
     var dataEvent = ele.getAttribute('data-event') || event;
     var dataEventOff = ele.getAttribute('data-event-off') || eventOff;
@@ -103,9 +152,9 @@ exports.default = function (target) {
 
   /* Unbind listener for custom event */
   target.prototype.customUnbindListener = function (ele) {
-    var _state2 = this.state;
-    var event = _state2.event;
-    var eventOff = _state2.eventOff;
+    var _state2 = this.state,
+        event = _state2.event,
+        eventOff = _state2.eventOff;
 
     var dataEvent = event || ele.getAttribute('data-event');
     var dataEventOff = eventOff || ele.getAttribute('data-event-off');
@@ -153,7 +202,7 @@ var setUntargetItems = function setUntargetItems(currentTarget, targetArray) {
 
 var customListener = void 0;
 
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -167,7 +216,7 @@ exports.default = function (target) {
   };
 };
 
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -238,7 +287,8 @@ var dispatchGlobalEvent = function dispatchGlobalEvent(eventName, opts) {
     event = new window.CustomEvent(eventName, { detail: opts });
   } else {
     event = document.createEvent('Event');
-    event.initEvent(eventName, false, true, opts);
+    event.initEvent(eventName, false, true);
+    event.detail = opts;
   }
 
   window.dispatchEvent(event);
@@ -246,7 +296,7 @@ var dispatchGlobalEvent = function dispatchGlobalEvent(eventName, opts) {
     * Static methods for react-tooltip
     */
 
-},{"../constant":2}],6:[function(require,module,exports){
+},{"../constant":3}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -296,7 +346,7 @@ var _constant2 = _interopRequireDefault(_constant);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-},{"../constant":2}],7:[function(require,module,exports){
+},{"../constant":3}],8:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -356,6 +406,10 @@ var _aria = require('./utils/aria');
 var _style = require('./style');
 
 var _style2 = _interopRequireDefault(_style);
+
+var _scrollparent = require('scrollparent');
+
+var _scrollparent2 = _interopRequireDefault(_scrollparent);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -484,9 +538,9 @@ var ReactTooltip = (0, _staticMethods2.default)(_class = (0, _windowListener2.de
     value: function bindListener() {
       var _this3 = this;
 
-      var _props = this.props;
-      var id = _props.id;
-      var globalEventOff = _props.globalEventOff;
+      var _props = this.props,
+          id = _props.id,
+          globalEventOff = _props.globalEventOff;
 
       var targetArray = this.getTargetArray(id);
 
@@ -525,9 +579,9 @@ var ReactTooltip = (0, _staticMethods2.default)(_class = (0, _windowListener2.de
     value: function unbindListener() {
       var _this4 = this;
 
-      var _props2 = this.props;
-      var id = _props2.id;
-      var globalEventOff = _props2.globalEventOff;
+      var _props2 = this.props,
+          id = _props2.id,
+          globalEventOff = _props2.globalEventOff;
 
       var targetArray = this.getTargetArray(id);
       targetArray.forEach(function (target) {
@@ -571,10 +625,10 @@ var ReactTooltip = (0, _staticMethods2.default)(_class = (0, _windowListener2.de
       }
       // Get the tooltip content
       // calculate in this phrase so that tip width height can be detected
-      var _props3 = this.props;
-      var children = _props3.children;
-      var multiline = _props3.multiline;
-      var getContent = _props3.getContent;
+      var _props3 = this.props,
+          children = _props3.children,
+          multiline = _props3.multiline,
+          getContent = _props3.getContent;
 
       var originTooltip = e.currentTarget.getAttribute('data-tip');
       var isMultiline = e.currentTarget.getAttribute('data-multiline') || multiline || false;
@@ -645,11 +699,11 @@ var ReactTooltip = (0, _staticMethods2.default)(_class = (0, _windowListener2.de
     value: function updateTooltip(e) {
       var _this6 = this;
 
-      var _state = this.state;
-      var delayShow = _state.delayShow;
-      var show = _state.show;
-      var isEmptyTip = _state.isEmptyTip;
-      var disable = _state.disable;
+      var _state = this.state,
+          delayShow = _state.delayShow,
+          show = _state.show,
+          isEmptyTip = _state.isEmptyTip,
+          disable = _state.disable;
       var afterShow = this.props.afterShow;
       var placeholder = this.state.placeholder;
 
@@ -690,10 +744,10 @@ var ReactTooltip = (0, _staticMethods2.default)(_class = (0, _windowListener2.de
     value: function hideTooltip(e, hasTarget) {
       var _this7 = this;
 
-      var _state2 = this.state;
-      var delayHide = _state2.delayHide;
-      var isEmptyTip = _state2.isEmptyTip;
-      var disable = _state2.disable;
+      var _state2 = this.state,
+          delayHide = _state2.delayHide,
+          isEmptyTip = _state2.isEmptyTip,
+          disable = _state2.disable;
       var afterHide = this.props.afterHide;
 
       if (!this.mount) return;
@@ -733,12 +787,14 @@ var ReactTooltip = (0, _staticMethods2.default)(_class = (0, _windowListener2.de
     key: 'addScrollListener',
     value: function addScrollListener(e) {
       var isCaptureMode = this.isCapture(e.currentTarget);
-      window.addEventListener('scroll', this.hideTooltip, isCaptureMode);
+      (0, _scrollparent2.default)(e.currentTarget).addEventListener('scroll', this.hideTooltip, isCaptureMode);
     }
   }, {
     key: 'removeScrollListener',
     value: function removeScrollListener() {
-      window.removeEventListener('scroll', this.hideTooltip);
+      if (this.state.currentTarget) {
+        (0, _scrollparent2.default)(this.state.currentTarget).removeEventListener('scroll', this.hideTooltip);
+      }
     }
 
     // Calculation the position
@@ -748,12 +804,12 @@ var ReactTooltip = (0, _staticMethods2.default)(_class = (0, _windowListener2.de
     value: function updatePosition() {
       var _this8 = this;
 
-      var _state3 = this.state;
-      var currentEvent = _state3.currentEvent;
-      var currentTarget = _state3.currentTarget;
-      var place = _state3.place;
-      var effect = _state3.effect;
-      var offset = _state3.offset;
+      var _state3 = this.state,
+          currentEvent = _state3.currentEvent,
+          currentTarget = _state3.currentTarget,
+          place = _state3.place,
+          effect = _state3.effect,
+          offset = _state3.offset;
 
       var node = _reactDom2.default.findDOMNode(this);
       var result = (0, _getPosition2.default)(currentEvent, currentTarget, node, place, effect, offset);
@@ -799,25 +855,27 @@ var ReactTooltip = (0, _staticMethods2.default)(_class = (0, _windowListener2.de
   }, {
     key: 'render',
     value: function render() {
-      var _state4 = this.state;
-      var placeholder = _state4.placeholder;
-      var extraClass = _state4.extraClass;
-      var html = _state4.html;
-      var ariaProps = _state4.ariaProps;
-      var disable = _state4.disable;
-      var isEmptyTip = _state4.isEmptyTip;
+      var _state4 = this.state,
+          placeholder = _state4.placeholder,
+          extraClass = _state4.extraClass,
+          html = _state4.html,
+          ariaProps = _state4.ariaProps,
+          disable = _state4.disable,
+          isEmptyTip = _state4.isEmptyTip;
 
       var tooltipClass = (0, _classnames2.default)('__react_component_tooltip', { 'show': this.state.show && !disable && !isEmptyTip }, { 'border': this.state.border }, { 'place-top': this.state.place === 'top' }, { 'place-bottom': this.state.place === 'bottom' }, { 'place-left': this.state.place === 'left' }, { 'place-right': this.state.place === 'right' }, { 'type-dark': this.state.type === 'dark' }, { 'type-success': this.state.type === 'success' }, { 'type-warning': this.state.type === 'warning' }, { 'type-error': this.state.type === 'error' }, { 'type-info': this.state.type === 'info' }, { 'type-light': this.state.type === 'light' });
       if (html) {
         return _react2.default.createElement('div', _extends({ className: tooltipClass + ' ' + extraClass
         }, ariaProps, {
           'data-id': 'tooltip',
+          style: this.props.style,
           dangerouslySetInnerHTML: { __html: placeholder } }));
       } else {
         return _react2.default.createElement(
           'div',
           _extends({ className: tooltipClass + ' ' + extraClass
           }, ariaProps, {
+            style: this.props.style,
             'data-id': 'tooltip' }),
           placeholder
         );
@@ -849,7 +907,8 @@ var ReactTooltip = (0, _staticMethods2.default)(_class = (0, _windowListener2.de
   afterHide: _react.PropTypes.func,
   disable: _react.PropTypes.bool,
   scrollHide: _react.PropTypes.bool,
-  resizeHide: _react.PropTypes.bool
+  resizeHide: _react.PropTypes.bool,
+  style: _react.PropTypes.object
 }, _class2.defaultProps = {
   resizeHide: true
 }, _temp)) || _class) || _class) || _class) || _class;
@@ -860,7 +919,7 @@ var ReactTooltip = (0, _staticMethods2.default)(_class = (0, _windowListener2.de
 module.exports = ReactTooltip;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./decorators/customEvent":3,"./decorators/isCapture":4,"./decorators/staticMethods":5,"./decorators/windowListener":6,"./style":8,"./utils/aria":9,"./utils/getPosition":10,"./utils/getTipContent":11,"classnames":1}],8:[function(require,module,exports){
+},{"./decorators/customEvent":4,"./decorators/isCapture":5,"./decorators/staticMethods":6,"./decorators/windowListener":7,"./style":9,"./utils/aria":10,"./utils/getPosition":11,"./utils/getTipContent":12,"classnames":1,"scrollparent":2}],9:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -868,7 +927,7 @@ Object.defineProperty(exports, "__esModule", {
 });
 exports.default = '.__react_component_tooltip{border-radius:3px;display:inline-block;font-size:13px;left:-999em;opacity:0;padding:8px 21px;position:fixed;pointer-events:none;transition:opacity 0.3s ease-out;top:-999em;visibility:hidden;z-index:999}.__react_component_tooltip:before,.__react_component_tooltip:after{content:"";width:0;height:0;position:absolute}.__react_component_tooltip.show{opacity:0.9;margin-top:0px;margin-left:0px;visibility:visible}.__react_component_tooltip.type-dark{color:#fff;background-color:#222}.__react_component_tooltip.type-dark.place-top:after{border-top-color:#222;border-top-style:solid;border-top-width:6px}.__react_component_tooltip.type-dark.place-bottom:after{border-bottom-color:#222;border-bottom-style:solid;border-bottom-width:6px}.__react_component_tooltip.type-dark.place-left:after{border-left-color:#222;border-left-style:solid;border-left-width:6px}.__react_component_tooltip.type-dark.place-right:after{border-right-color:#222;border-right-style:solid;border-right-width:6px}.__react_component_tooltip.type-dark.border{border:1px solid #fff}.__react_component_tooltip.type-dark.border.place-top:before{border-top:8px solid #fff}.__react_component_tooltip.type-dark.border.place-bottom:before{border-bottom:8px solid #fff}.__react_component_tooltip.type-dark.border.place-left:before{border-left:8px solid #fff}.__react_component_tooltip.type-dark.border.place-right:before{border-right:8px solid #fff}.__react_component_tooltip.type-success{color:#fff;background-color:#8DC572}.__react_component_tooltip.type-success.place-top:after{border-top-color:#8DC572;border-top-style:solid;border-top-width:6px}.__react_component_tooltip.type-success.place-bottom:after{border-bottom-color:#8DC572;border-bottom-style:solid;border-bottom-width:6px}.__react_component_tooltip.type-success.place-left:after{border-left-color:#8DC572;border-left-style:solid;border-left-width:6px}.__react_component_tooltip.type-success.place-right:after{border-right-color:#8DC572;border-right-style:solid;border-right-width:6px}.__react_component_tooltip.type-success.border{border:1px solid #fff}.__react_component_tooltip.type-success.border.place-top:before{border-top:8px solid #fff}.__react_component_tooltip.type-success.border.place-bottom:before{border-bottom:8px solid #fff}.__react_component_tooltip.type-success.border.place-left:before{border-left:8px solid #fff}.__react_component_tooltip.type-success.border.place-right:before{border-right:8px solid #fff}.__react_component_tooltip.type-warning{color:#fff;background-color:#F0AD4E}.__react_component_tooltip.type-warning.place-top:after{border-top-color:#F0AD4E;border-top-style:solid;border-top-width:6px}.__react_component_tooltip.type-warning.place-bottom:after{border-bottom-color:#F0AD4E;border-bottom-style:solid;border-bottom-width:6px}.__react_component_tooltip.type-warning.place-left:after{border-left-color:#F0AD4E;border-left-style:solid;border-left-width:6px}.__react_component_tooltip.type-warning.place-right:after{border-right-color:#F0AD4E;border-right-style:solid;border-right-width:6px}.__react_component_tooltip.type-warning.border{border:1px solid #fff}.__react_component_tooltip.type-warning.border.place-top:before{border-top:8px solid #fff}.__react_component_tooltip.type-warning.border.place-bottom:before{border-bottom:8px solid #fff}.__react_component_tooltip.type-warning.border.place-left:before{border-left:8px solid #fff}.__react_component_tooltip.type-warning.border.place-right:before{border-right:8px solid #fff}.__react_component_tooltip.type-error{color:#fff;background-color:#BE6464}.__react_component_tooltip.type-error.place-top:after{border-top-color:#BE6464;border-top-style:solid;border-top-width:6px}.__react_component_tooltip.type-error.place-bottom:after{border-bottom-color:#BE6464;border-bottom-style:solid;border-bottom-width:6px}.__react_component_tooltip.type-error.place-left:after{border-left-color:#BE6464;border-left-style:solid;border-left-width:6px}.__react_component_tooltip.type-error.place-right:after{border-right-color:#BE6464;border-right-style:solid;border-right-width:6px}.__react_component_tooltip.type-error.border{border:1px solid #fff}.__react_component_tooltip.type-error.border.place-top:before{border-top:8px solid #fff}.__react_component_tooltip.type-error.border.place-bottom:before{border-bottom:8px solid #fff}.__react_component_tooltip.type-error.border.place-left:before{border-left:8px solid #fff}.__react_component_tooltip.type-error.border.place-right:before{border-right:8px solid #fff}.__react_component_tooltip.type-info{color:#fff;background-color:#337AB7}.__react_component_tooltip.type-info.place-top:after{border-top-color:#337AB7;border-top-style:solid;border-top-width:6px}.__react_component_tooltip.type-info.place-bottom:after{border-bottom-color:#337AB7;border-bottom-style:solid;border-bottom-width:6px}.__react_component_tooltip.type-info.place-left:after{border-left-color:#337AB7;border-left-style:solid;border-left-width:6px}.__react_component_tooltip.type-info.place-right:after{border-right-color:#337AB7;border-right-style:solid;border-right-width:6px}.__react_component_tooltip.type-info.border{border:1px solid #fff}.__react_component_tooltip.type-info.border.place-top:before{border-top:8px solid #fff}.__react_component_tooltip.type-info.border.place-bottom:before{border-bottom:8px solid #fff}.__react_component_tooltip.type-info.border.place-left:before{border-left:8px solid #fff}.__react_component_tooltip.type-info.border.place-right:before{border-right:8px solid #fff}.__react_component_tooltip.type-light{color:#222;background-color:#fff}.__react_component_tooltip.type-light.place-top:after{border-top-color:#fff;border-top-style:solid;border-top-width:6px}.__react_component_tooltip.type-light.place-bottom:after{border-bottom-color:#fff;border-bottom-style:solid;border-bottom-width:6px}.__react_component_tooltip.type-light.place-left:after{border-left-color:#fff;border-left-style:solid;border-left-width:6px}.__react_component_tooltip.type-light.place-right:after{border-right-color:#fff;border-right-style:solid;border-right-width:6px}.__react_component_tooltip.type-light.border{border:1px solid #222}.__react_component_tooltip.type-light.border.place-top:before{border-top:8px solid #222}.__react_component_tooltip.type-light.border.place-bottom:before{border-bottom:8px solid #222}.__react_component_tooltip.type-light.border.place-left:before{border-left:8px solid #222}.__react_component_tooltip.type-light.border.place-right:before{border-right:8px solid #222}.__react_component_tooltip.place-top{margin-top:-10px}.__react_component_tooltip.place-top:before{border-left:10px solid transparent;border-right:10px solid transparent;bottom:-8px;left:50%;margin-left:-10px}.__react_component_tooltip.place-top:after{border-left:8px solid transparent;border-right:8px solid transparent;bottom:-6px;left:50%;margin-left:-8px}.__react_component_tooltip.place-bottom{margin-top:10px}.__react_component_tooltip.place-bottom:before{border-left:10px solid transparent;border-right:10px solid transparent;top:-8px;left:50%;margin-left:-10px}.__react_component_tooltip.place-bottom:after{border-left:8px solid transparent;border-right:8px solid transparent;top:-6px;left:50%;margin-left:-8px}.__react_component_tooltip.place-left{margin-left:-10px}.__react_component_tooltip.place-left:before{border-top:6px solid transparent;border-bottom:6px solid transparent;right:-8px;top:50%;margin-top:-5px}.__react_component_tooltip.place-left:after{border-top:5px solid transparent;border-bottom:5px solid transparent;right:-6px;top:50%;margin-top:-4px}.__react_component_tooltip.place-right{margin-left:10px}.__react_component_tooltip.place-right:before{border-top:6px solid transparent;border-bottom:6px solid transparent;left:-8px;top:50%;margin-top:-5px}.__react_component_tooltip.place-right:after{border-top:5px solid transparent;border-bottom:5px solid transparent;left:-6px;top:50%;margin-top:-4px}.__react_component_tooltip .multi-line{display:block;padding:2px 0px;text-align:center}';
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 "use strict";
 
 Object.defineProperty(exports, "__esModule", {
@@ -894,7 +953,7 @@ function parseAria(props) {
   return ariaObj;
 }
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -905,28 +964,25 @@ exports.default = function (e, target, node, place, effect, offset) {
   var tipWidth = node.clientWidth;
   var tipHeight = node.clientHeight;
 
-  var _getCurrentOffset = getCurrentOffset(e, target, effect);
-
-  var mouseX = _getCurrentOffset.mouseX;
-  var mouseY = _getCurrentOffset.mouseY;
+  var _getCurrentOffset = getCurrentOffset(e, target, effect),
+      mouseX = _getCurrentOffset.mouseX,
+      mouseY = _getCurrentOffset.mouseY;
 
   var defaultOffset = getDefaultPosition(effect, target.clientWidth, target.clientHeight, tipWidth, tipHeight);
 
-  var _calculateOffset = calculateOffset(offset);
-
-  var extraOffset_X = _calculateOffset.extraOffset_X;
-  var extraOffset_Y = _calculateOffset.extraOffset_Y;
-
+  var _calculateOffset = calculateOffset(offset),
+      extraOffset_X = _calculateOffset.extraOffset_X,
+      extraOffset_Y = _calculateOffset.extraOffset_Y;
 
   var windowWidth = window.innerWidth;
   var windowHeight = window.innerHeight;
 
-  var _getParent = getParent(node);
-
-  var parentTop = _getParent.parentTop;
-  var parentLeft = _getParent.parentLeft;
+  var _getParent = getParent(node),
+      parentTop = _getParent.parentTop,
+      parentLeft = _getParent.parentLeft;
 
   // Get the edge offset of the tooltip
+
 
   var getTipOffsetLeft = function getTipOffsetLeft(place) {
     var offset_X = defaultOffset[place].l;
@@ -959,10 +1015,10 @@ exports.default = function (e, target, node, place, effect, offset) {
     return { result: result, newPlace: newPlace };
   };
   var outsideLeft = function outsideLeft() {
-    var _outsideVertical = outsideVertical();
+    var _outsideVertical = outsideVertical(),
+        result = _outsideVertical.result,
+        newPlace = _outsideVertical.newPlace; // Deal with vertical as first priority
 
-    var result = _outsideVertical.result;
-    var newPlace = _outsideVertical.newPlace; // Deal with vertical as first priority
 
     if (result && outsideHorizontal().result) {
       return { result: false }; // No need to change, if change to vertical will out of space
@@ -974,10 +1030,9 @@ exports.default = function (e, target, node, place, effect, offset) {
     return { result: result, newPlace: newPlace };
   };
   var outsideRight = function outsideRight() {
-    var _outsideVertical2 = outsideVertical();
-
-    var result = _outsideVertical2.result;
-    var newPlace = _outsideVertical2.newPlace;
+    var _outsideVertical2 = outsideVertical(),
+        result = _outsideVertical2.result,
+        newPlace = _outsideVertical2.newPlace;
 
     if (result && outsideHorizontal().result) {
       return { result: false }; // No need to change, if change to vertical will out of space
@@ -1002,10 +1057,9 @@ exports.default = function (e, target, node, place, effect, offset) {
     return { result: result, newPlace: newPlace };
   };
   var outsideTop = function outsideTop() {
-    var _outsideHorizontal = outsideHorizontal();
-
-    var result = _outsideHorizontal.result;
-    var newPlace = _outsideHorizontal.newPlace;
+    var _outsideHorizontal = outsideHorizontal(),
+        result = _outsideHorizontal.result,
+        newPlace = _outsideHorizontal.newPlace;
 
     if (result && outsideVertical().result) {
       return { result: false };
@@ -1017,10 +1071,9 @@ exports.default = function (e, target, node, place, effect, offset) {
     return { result: result, newPlace: newPlace };
   };
   var outsideBottom = function outsideBottom() {
-    var _outsideHorizontal2 = outsideHorizontal();
-
-    var result = _outsideHorizontal2.result;
-    var newPlace = _outsideHorizontal2.newPlace;
+    var _outsideHorizontal2 = outsideHorizontal(),
+        result = _outsideHorizontal2.result,
+        newPlace = _outsideHorizontal2.newPlace;
 
     if (result && outsideVertical().result) {
       return { result: false };
@@ -1203,13 +1256,15 @@ var getParent = function getParent(currentTarget) {
     currentParent = currentParent.parentElement;
   }
 
-  var parentTop = currentParent && currentParent.getBoundingClientRect().top || 0;
-  var parentLeft = currentParent && currentParent.getBoundingClientRect().left || 0;
+  var useBoundingClientRect = currentParent && currentParent.style.position !== 'fixed';
+
+  var parentTop = useBoundingClientRect && currentParent.getBoundingClientRect().top || 0;
+  var parentLeft = useBoundingClientRect && currentParent.getBoundingClientRect().left || 0;
 
   return { parentTop: parentTop, parentLeft: parentLeft };
 };
 
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -1245,5 +1300,5 @@ var _react2 = _interopRequireDefault(_react);
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}]},{},[7])(7)
+},{}]},{},[8])(8)
 });

@@ -17,6 +17,7 @@ import { parseAria } from './utils/aria'
 
 /* CSS */
 import cssStyle from './style'
+import scrollparent from 'scrollparent'
 
 @staticMethods @windowListener @customEvent @isCapture
 class ReactTooltip extends Component {
@@ -44,7 +45,8 @@ class ReactTooltip extends Component {
     afterHide: PropTypes.func,
     disable: PropTypes.bool,
     scrollHide: PropTypes.bool,
-    resizeHide: PropTypes.bool
+    resizeHide: PropTypes.bool,
+    style: PropTypes.object
   };
 
   static defaultProps = {
@@ -354,11 +356,13 @@ class ReactTooltip extends Component {
    */
   addScrollListener (e) {
     const isCaptureMode = this.isCapture(e.currentTarget)
-    window.addEventListener('scroll', this.hideTooltip, isCaptureMode)
+    scrollparent(e.currentTarget).addEventListener('scroll', this.hideTooltip, isCaptureMode)
   }
 
   removeScrollListener () {
-    window.removeEventListener('scroll', this.hideTooltip)
+    if (this.state.currentTarget) {
+      scrollparent(this.state.currentTarget).removeEventListener('scroll', this.hideTooltip)
+    }
   }
 
   // Calculation the position
@@ -422,12 +426,14 @@ class ReactTooltip extends Component {
         <div className={`${tooltipClass} ${extraClass}`}
           {...ariaProps}
           data-id='tooltip'
+          style={this.props.style}
           dangerouslySetInnerHTML={{__html: placeholder}}></div>
       )
     } else {
       return (
         <div className={`${tooltipClass} ${extraClass}`}
           {...ariaProps}
+          style={this.props.style}
           data-id='tooltip'>{placeholder}</div>
       )
     }
