@@ -9,17 +9,18 @@ import staticMethods from './decorators/staticMethods'
 import windowListener from './decorators/windowListener'
 import customEvent from './decorators/customEvent'
 import isCapture from './decorators/isCapture'
+import getEffect from './decorators/getEffect'
 
 /* Utils */
 import getPosition from './utils/getPosition'
 import getTipContent from './utils/getTipContent'
 import { parseAria } from './utils/aria'
+import nodeListToArray from './utils/nodeListToArray'
 
 /* CSS */
 import cssStyle from './style'
-import scrollparent from 'scrollparent'
 
-@staticMethods @windowListener @customEvent @isCapture
+@staticMethods @windowListener @customEvent @isCapture @getEffect
 class ReactTooltip extends Component {
 
   static propTypes = {
@@ -30,7 +31,9 @@ class ReactTooltip extends Component {
     offset: PropTypes.object,
     multiline: PropTypes.bool,
     border: PropTypes.bool,
+    insecure: PropTypes.bool,
     class: PropTypes.string,
+    className: PropTypes.string,
     id: PropTypes.string,
     html: PropTypes.bool,
     delayHide: PropTypes.number,
@@ -46,11 +49,18 @@ class ReactTooltip extends Component {
     disable: PropTypes.bool,
     scrollHide: PropTypes.bool,
     resizeHide: PropTypes.bool,
-    style: PropTypes.object
+    wrapper: PropTypes.string
   };
 
   static defaultProps = {
-    resizeHide: true
+    insecure: true,
+    resizeHide: true,
+    wrapper: 'div'
+  };
+
+  static supportedWrappers = {
+    'div': React.DOM.div,
+    'span': React.DOM.span
   };
 
   constructor (props) {
@@ -102,9 +112,12 @@ class ReactTooltip extends Component {
   }
 
   componentDidMount () {
-    this.setStyleHeader() // Set the style to the <link>
+    const { insecure, resizeHide } = this.props
+    if (insecure) {
+      this.setStyleHeader() // Set the style to the <link>
+    }
     this.bindListener() // Bind listener for tooltip
-    this.bindWindowEvents(this.props.resizeHide) // Bind global event for static method
+    this.bindWindowEvents(resizeHide) // Bind global event for static method
   }
 
   componentWillReceiveProps (props) {
@@ -134,18 +147,13 @@ class ReactTooltip extends Component {
    */
   getTargetArray (id) {
     let targetArray
-
     if (!id) {
       targetArray = document.querySelectorAll('[data-tip]:not([data-for])')
     } else {
       targetArray = document.querySelectorAll(`[data-tip][data-for="${id}"]`)
     }
-
     // targetArray is a NodeList, convert it to a real array
-    // I hope I can use Object.values...
-    return Object.keys(targetArray).filter(key => key !== 'length').map(key => {
-      return targetArray[key]
-    })
+    return nodeListToArray(targetArray)
   }
 
   /**
@@ -158,6 +166,7 @@ class ReactTooltip extends Component {
 
     targetArray.forEach(target => {
       const isCaptureMode = this.isCapture(target)
+      const effect = this.getEffect(target)
       if (target.getAttribute('currentItem') === null) {
         target.setAttribute('currentItem', 'false')
       }
@@ -169,7 +178,7 @@ class ReactTooltip extends Component {
       }
 
       target.addEventListener('mouseenter', this.showTooltip, isCaptureMode)
-      if (this.state.effect === 'float') {
+      if (effect === 'float') {
         target.addEventListener('mousemove', this.updateTooltip, isCaptureMode)
       }
       target.addEventListener('mouseleave', this.hideTooltip, isCaptureMode)
@@ -202,9 +211,10 @@ class ReactTooltip extends Component {
    * so that the tooltip can switch between custom and default listener
    */
   unbindBasicListener (target) {
-    target.removeEventListener('mouseenter', this.showTooltip)
-    target.removeEventListener('mousemove', this.updateTooltip)
-    target.removeEventListener('mouseleave', this.hideTooltip)
+    const isCaptureMode = this.isCapture(target)
+    target.removeEventListener('mouseenter', this.showTooltip, isCaptureMode)
+    target.removeEventListener('mousemove', this.updateTooltip, isCaptureMode)
+    target.removeEventListener('mouseleave', this.hideTooltip, isCaptureMode)
   }
 
   /**
@@ -246,12 +256,15 @@ class ReactTooltip extends Component {
       scrollHide = this.props.scrollHide
     }
 
+    // To prevent previously created timers from triggering
+    this.clearTimer()
+
     this.setState({
       placeholder,
       isEmptyTip,
       place: e.currentTarget.getAttribute('data-place') || this.props.place || 'top',
       type: e.currentTarget.getAttribute('data-type') || this.props.type || 'dark',
-      effect: switchToSolid && 'solid' || e.currentTarget.getAttribute('data-effect') || this.props.effect || 'float',
+      effect: switchToSolid && 'solid' || this.getEffect(e.currentTarget),
       offset: e.currentTarget.getAttribute('data-offset') || this.props.offset || {},
       html: e.currentTarget.getAttribute('data-html')
         ? e.currentTarget.getAttribute('data-html') === 'true'
@@ -261,7 +274,7 @@ class ReactTooltip extends Component {
       border: e.currentTarget.getAttribute('data-border')
         ? e.currentTarget.getAttribute('data-border') === 'true'
         : (this.props.border || false),
-      extraClass: e.currentTarget.getAttribute('data-class') || this.props.class || '',
+      extraClass: e.currentTarget.getAttribute('data-class') || this.props.class || this.props.className || '',
       disable: e.currentTarget.getAttribute('data-tip-disable')
         ? e.currentTarget.getAttribute('data-tip-disable') === 'true'
         : (this.props.disable || false)
@@ -356,13 +369,11 @@ class ReactTooltip extends Component {
    */
   addScrollListener (e) {
     const isCaptureMode = this.isCapture(e.currentTarget)
-    scrollparent(e.currentTarget).addEventListener('scroll', this.hideTooltip, isCaptureMode)
+    window.addEventListener('scroll', this.hideTooltip, isCaptureMode)
   }
 
   removeScrollListener () {
-    if (this.state.currentTarget) {
-      scrollparent(this.state.currentTarget).removeEventListener('scroll', this.hideTooltip)
-    }
+    window.removeEventListener('scroll', this.hideTooltip)
   }
 
   // Calculation the position
@@ -421,20 +432,22 @@ class ReactTooltip extends Component {
       {'type-info': this.state.type === 'info'},
       {'type-light': this.state.type === 'light'}
     )
+
+    let wrapper = ReactTooltip.supportedWrappers[this.props.wrapper]
+    if (!wrapper) wrapper = ReactTooltip.supportedWrappers['div']
+
     if (html) {
       return (
-        <div className={`${tooltipClass} ${extraClass}`}
+        <wrapper className={`${tooltipClass} ${extraClass}`}
           {...ariaProps}
           data-id='tooltip'
-          style={this.props.style}
-          dangerouslySetInnerHTML={{__html: placeholder}}></div>
+          dangerouslySetInnerHTML={{__html: placeholder}}></wrapper>
       )
     } else {
       return (
-        <div className={`${tooltipClass} ${extraClass}`}
+        <wrapper className={`${tooltipClass} ${extraClass}`}
           {...ariaProps}
-          style={this.props.style}
-          data-id='tooltip'>{placeholder}</div>
+          data-id='tooltip'>{placeholder}</wrapper>
       )
     }
   }

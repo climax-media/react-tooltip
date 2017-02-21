@@ -23,8 +23,9 @@ import ReactTooltip from 'react-tooltip'
 ```
 
 2 . Add data-tip = "your placeholder" to your element
-
-	<p data-tip="hello world">Tooltip</p>
+```jsx
+<p data-tip="hello world">Tooltip</p>
+```
 
 3 . Including react-tooltip component
 
@@ -56,10 +57,11 @@ Global|Specific	|Type	|Values  |  Description
  isCapture | data-iscapture | Bool | true, false | when set to true, custom event's propagation mode will be capture
  offset	|   data-offset  |  Object  |  top, right, bottom, left | `data-offset="{'top': 10, 'left': 10}"` for specific and `offset={{top: 10, left: 10}}` for global
 multiline	|   data-multiline  |  Bool  |  true, false | support `<br>`, `<br />` to make multiline
-class	|   data-class  |  String  |   | extra custom class, can use !important to overwrite react-tooltip's default class
+className	|   data-class  |  String  |   | extra custom class, can use !important to overwrite react-tooltip's default class
  html	|   data-html  |  Bool  |  true, false  |  `<p data-tip="<p>HTML tooltip</p>" data-html={true}></p>` or `<ReactTooltip html={true} />`
  delayHide	|   data-delay-hide  |  Number  |   | `<p data-tip="tooltip" data-delay-hide='1000'></p>` or `<ReactTooltip delayHide={1000} />`
  delayShow	|   data-delay-show  |  Number  |   | `<p data-tip="tooltip" data-delay-show='1000'></p>` or `<ReactTooltip delayShow={1000} />`
+ insecure | null | Bool | true, false | Whether to inject the style header into the page dynamically (violates CSP style-src but is a convenient default)
  border  |   data-border  |  Bool  |  true, false | Add one pixel white border
  getContent | null | Func or Array | () => {}, [() => {}, Interval] | Generate the tip content dynamically
  afterShow | null | Func | () => {} | Function that will be called after tooltip show
@@ -67,6 +69,7 @@ class	|   data-class  |  String  |   | extra custom class, can use !important to
  disable | data-tip-disable | Bool | true, false | Disable the tooltip behaviour, default is false
  scrollHide | data-scroll-hide | Bool | true, false | Hide the tooltip when scrolling, default is true
  resizeHide | null | Bool | true, false | Hide the tooltip when resizing the window, default is true
+ wrapper | null | String | div, span | Selecting the wrapper element of the react tooltip, default is div
 
 ## Using react component as tooltip
 Check the example [React-tooltip Test](http://wwayne.com/react-tooltip)
@@ -112,8 +115,8 @@ import ReactTooltip from 'react-tooltip'
 The component was designed to set a `<Reactooltip />` one place then use tooltip everywhere, but a lot of people stuck in using this component with modal, you can check the discussion [here](https://github.com/wwayne/react-tooltip/issues/130), the summarization of solving the problem is as following:
 
 1. Put `<ReactTooltip />` out of the `<Modal>`
-2. Use `React.rebuild()` when opening the modal
-3. If your modal's z-index happens to higher than the tooltip, use the attribute `class` to custom your tooltip's z-index
+2. Use `ReactTooltip.rebuild()` when opening the modal
+3. If your modal's z-index happens to higher than the tooltip, use the attribute `className` to custom your tooltip's z-index
 
 >I suggest always put `<ReactTooltip />` in the Highest level or smart component of Redux, so you might need these static
 method to control tooltip's behaviour in some situations
@@ -121,14 +124,14 @@ method to control tooltip's behaviour in some situations
 ### 2. Hide tooltip when getContent returns undefined
 When you set `getContent={() => { return }}` you will find the tooltip will dispaly `true`, that's because React will set the value of data-* to be 'true' automatically if there is no value to be set. So you have to set `data-tip=''` in this situaction.
 
-```
+```jsx
 <p data-tip='' data-for='test'></p>
 <ReactTooltip id='test' getContent={() => { return null }}/>
 ```
 
 Same for empty children, if you don't want show the tooltip when the children is empty
 
-```
+```jsx
 <p data-tip='' data-for='test'></p>
 <ReactTooltip id='test'>{}</ReactTooltip>
 ```

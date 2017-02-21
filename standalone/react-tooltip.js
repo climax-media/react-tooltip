@@ -49,55 +49,6 @@
 }());
 
 },{}],2:[function(require,module,exports){
-(function (root, factory) {
-  if (typeof define === "function" && define.amd) {
-    define([], factory);
-  } else if (typeof module === "object" && module.exports) {
-    module.exports = factory();
-  } else {
-    root.Scrollparent = factory();
-  }
-}(this, function () {
-  var regex = /(auto|scroll)/;
-
-  var parents = function (node, ps) {
-    if (node.parentNode === null) { return ps; }
-
-    return parents(node.parentNode, ps.concat([node]));
-  };
-
-  var style = function (node, prop) {
-    return getComputedStyle(node, null).getPropertyValue(prop);
-  };
-
-  var overflow = function (node) {
-    return style(node, "overflow") + style(node, "overflow-y") + style(node, "overflow-x");
-  };
-
-  var scroll = function (node) {
-   return regex.test(overflow(node));
-  };
-
-  var scrollParent = function (node) {
-    if (!(node instanceof HTMLElement || node instanceof SVGElement)) {
-      return ;
-    }
-
-    var ps = parents(node.parentNode, []);
-
-    for (var i = 0; i < ps.length; i += 1) {
-      if (scroll(ps[i])) {
-        return ps[i];
-      }
-    }
-
-    return document.body;
-  };
-
-  return scrollParent;
-}));
-
-},{}],3:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -112,7 +63,7 @@ exports.default = {
   }
 };
 
-},{}],4:[function(require,module,exports){
+},{}],3:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -201,6 +152,20 @@ var setUntargetItems = function setUntargetItems(currentTarget, targetArray) {
 };
 
 var customListener = void 0;
+
+},{}],4:[function(require,module,exports){
+'use strict';
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+exports.default = function (target) {
+  target.prototype.getEffect = function (currentTarget) {
+    var dataEffect = currentTarget.getAttribute('data-effect');
+    return dataEffect || this.props.effect || 'float';
+  };
+};
 
 },{}],5:[function(require,module,exports){
 'use strict';
@@ -296,7 +261,7 @@ var dispatchGlobalEvent = function dispatchGlobalEvent(eventName, opts) {
     * Static methods for react-tooltip
     */
 
-},{"../constant":3}],7:[function(require,module,exports){
+},{"../constant":2}],7:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -346,7 +311,7 @@ var _constant2 = _interopRequireDefault(_constant);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-},{"../constant":3}],8:[function(require,module,exports){
+},{"../constant":2}],8:[function(require,module,exports){
 (function (global){
 'use strict';
 
@@ -393,6 +358,10 @@ var _isCapture = require('./decorators/isCapture');
 
 var _isCapture2 = _interopRequireDefault(_isCapture);
 
+var _getEffect = require('./decorators/getEffect');
+
+var _getEffect2 = _interopRequireDefault(_getEffect);
+
 var _getPosition = require('./utils/getPosition');
 
 var _getPosition2 = _interopRequireDefault(_getPosition);
@@ -403,13 +372,13 @@ var _getTipContent2 = _interopRequireDefault(_getTipContent);
 
 var _aria = require('./utils/aria');
 
+var _nodeListToArray = require('./utils/nodeListToArray');
+
+var _nodeListToArray2 = _interopRequireDefault(_nodeListToArray);
+
 var _style = require('./style');
 
 var _style2 = _interopRequireDefault(_style);
-
-var _scrollparent = require('scrollparent');
-
-var _scrollparent2 = _interopRequireDefault(_scrollparent);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
@@ -419,7 +388,7 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var ReactTooltip = (0, _staticMethods2.default)(_class = (0, _windowListener2.default)(_class = (0, _customEvent2.default)(_class = (0, _isCapture2.default)(_class = (_temp = _class2 = function (_Component) {
+var ReactTooltip = (0, _staticMethods2.default)(_class = (0, _windowListener2.default)(_class = (0, _customEvent2.default)(_class = (0, _isCapture2.default)(_class = (0, _getEffect2.default)(_class = (_temp = _class2 = function (_Component) {
   _inherits(ReactTooltip, _Component);
 
   function ReactTooltip(props) {
@@ -474,9 +443,15 @@ var ReactTooltip = (0, _staticMethods2.default)(_class = (0, _windowListener2.de
   }, {
     key: 'componentDidMount',
     value: function componentDidMount() {
-      this.setStyleHeader(); // Set the style to the <link>
+      var _props = this.props,
+          insecure = _props.insecure,
+          resizeHide = _props.resizeHide;
+
+      if (insecure) {
+        this.setStyleHeader(); // Set the style to the <link>
+      }
       this.bindListener(); // Bind listener for tooltip
-      this.bindWindowEvents(this.props.resizeHide); // Bind global event for static method
+      this.bindWindowEvents(resizeHide); // Bind global event for static method
     }
   }, {
     key: 'componentWillReceiveProps',
@@ -512,20 +487,13 @@ var ReactTooltip = (0, _staticMethods2.default)(_class = (0, _windowListener2.de
     key: 'getTargetArray',
     value: function getTargetArray(id) {
       var targetArray = void 0;
-
       if (!id) {
         targetArray = document.querySelectorAll('[data-tip]:not([data-for])');
       } else {
         targetArray = document.querySelectorAll('[data-tip][data-for="' + id + '"]');
       }
-
       // targetArray is a NodeList, convert it to a real array
-      // I hope I can use Object.values...
-      return Object.keys(targetArray).filter(function (key) {
-        return key !== 'length';
-      }).map(function (key) {
-        return targetArray[key];
-      });
+      return (0, _nodeListToArray2.default)(targetArray);
     }
 
     /**
@@ -538,14 +506,15 @@ var ReactTooltip = (0, _staticMethods2.default)(_class = (0, _windowListener2.de
     value: function bindListener() {
       var _this3 = this;
 
-      var _props = this.props,
-          id = _props.id,
-          globalEventOff = _props.globalEventOff;
+      var _props2 = this.props,
+          id = _props2.id,
+          globalEventOff = _props2.globalEventOff;
 
       var targetArray = this.getTargetArray(id);
 
       targetArray.forEach(function (target) {
         var isCaptureMode = _this3.isCapture(target);
+        var effect = _this3.getEffect(target);
         if (target.getAttribute('currentItem') === null) {
           target.setAttribute('currentItem', 'false');
         }
@@ -557,7 +526,7 @@ var ReactTooltip = (0, _staticMethods2.default)(_class = (0, _windowListener2.de
         }
 
         target.addEventListener('mouseenter', _this3.showTooltip, isCaptureMode);
-        if (_this3.state.effect === 'float') {
+        if (effect === 'float') {
           target.addEventListener('mousemove', _this3.updateTooltip, isCaptureMode);
         }
         target.addEventListener('mouseleave', _this3.hideTooltip, isCaptureMode);
@@ -579,9 +548,9 @@ var ReactTooltip = (0, _staticMethods2.default)(_class = (0, _windowListener2.de
     value: function unbindListener() {
       var _this4 = this;
 
-      var _props2 = this.props,
-          id = _props2.id,
-          globalEventOff = _props2.globalEventOff;
+      var _props3 = this.props,
+          id = _props3.id,
+          globalEventOff = _props3.globalEventOff;
 
       var targetArray = this.getTargetArray(id);
       targetArray.forEach(function (target) {
@@ -601,9 +570,10 @@ var ReactTooltip = (0, _staticMethods2.default)(_class = (0, _windowListener2.de
   }, {
     key: 'unbindBasicListener',
     value: function unbindBasicListener(target) {
-      target.removeEventListener('mouseenter', this.showTooltip);
-      target.removeEventListener('mousemove', this.updateTooltip);
-      target.removeEventListener('mouseleave', this.hideTooltip);
+      var isCaptureMode = this.isCapture(target);
+      target.removeEventListener('mouseenter', this.showTooltip, isCaptureMode);
+      target.removeEventListener('mousemove', this.updateTooltip, isCaptureMode);
+      target.removeEventListener('mouseleave', this.hideTooltip, isCaptureMode);
     }
 
     /**
@@ -625,10 +595,10 @@ var ReactTooltip = (0, _staticMethods2.default)(_class = (0, _windowListener2.de
       }
       // Get the tooltip content
       // calculate in this phrase so that tip width height can be detected
-      var _props3 = this.props,
-          children = _props3.children,
-          multiline = _props3.multiline,
-          getContent = _props3.getContent;
+      var _props4 = this.props,
+          children = _props4.children,
+          multiline = _props4.multiline,
+          getContent = _props4.getContent;
 
       var originTooltip = e.currentTarget.getAttribute('data-tip');
       var isMultiline = e.currentTarget.getAttribute('data-multiline') || multiline || false;
@@ -656,18 +626,21 @@ var ReactTooltip = (0, _staticMethods2.default)(_class = (0, _windowListener2.de
         scrollHide = this.props.scrollHide;
       }
 
+      // To prevent previously created timers from triggering
+      this.clearTimer();
+
       this.setState({
         placeholder: placeholder,
         isEmptyTip: isEmptyTip,
         place: e.currentTarget.getAttribute('data-place') || this.props.place || 'top',
         type: e.currentTarget.getAttribute('data-type') || this.props.type || 'dark',
-        effect: switchToSolid && 'solid' || e.currentTarget.getAttribute('data-effect') || this.props.effect || 'float',
+        effect: switchToSolid && 'solid' || this.getEffect(e.currentTarget),
         offset: e.currentTarget.getAttribute('data-offset') || this.props.offset || {},
         html: e.currentTarget.getAttribute('data-html') ? e.currentTarget.getAttribute('data-html') === 'true' : this.props.html || false,
         delayShow: e.currentTarget.getAttribute('data-delay-show') || this.props.delayShow || 0,
         delayHide: e.currentTarget.getAttribute('data-delay-hide') || this.props.delayHide || 0,
         border: e.currentTarget.getAttribute('data-border') ? e.currentTarget.getAttribute('data-border') === 'true' : this.props.border || false,
-        extraClass: e.currentTarget.getAttribute('data-class') || this.props.class || '',
+        extraClass: e.currentTarget.getAttribute('data-class') || this.props.class || this.props.className || '',
         disable: e.currentTarget.getAttribute('data-tip-disable') ? e.currentTarget.getAttribute('data-tip-disable') === 'true' : this.props.disable || false
       }, function () {
         if (scrollHide) _this5.addScrollListener(e);
@@ -787,14 +760,12 @@ var ReactTooltip = (0, _staticMethods2.default)(_class = (0, _windowListener2.de
     key: 'addScrollListener',
     value: function addScrollListener(e) {
       var isCaptureMode = this.isCapture(e.currentTarget);
-      (0, _scrollparent2.default)(e.currentTarget).addEventListener('scroll', this.hideTooltip, isCaptureMode);
+      window.addEventListener('scroll', this.hideTooltip, isCaptureMode);
     }
   }, {
     key: 'removeScrollListener',
     value: function removeScrollListener() {
-      if (this.state.currentTarget) {
-        (0, _scrollparent2.default)(this.state.currentTarget).removeEventListener('scroll', this.hideTooltip);
-      }
+      window.removeEventListener('scroll', this.hideTooltip);
     }
 
     // Calculation the position
@@ -864,18 +835,20 @@ var ReactTooltip = (0, _staticMethods2.default)(_class = (0, _windowListener2.de
           isEmptyTip = _state4.isEmptyTip;
 
       var tooltipClass = (0, _classnames2.default)('__react_component_tooltip', { 'show': this.state.show && !disable && !isEmptyTip }, { 'border': this.state.border }, { 'place-top': this.state.place === 'top' }, { 'place-bottom': this.state.place === 'bottom' }, { 'place-left': this.state.place === 'left' }, { 'place-right': this.state.place === 'right' }, { 'type-dark': this.state.type === 'dark' }, { 'type-success': this.state.type === 'success' }, { 'type-warning': this.state.type === 'warning' }, { 'type-error': this.state.type === 'error' }, { 'type-info': this.state.type === 'info' }, { 'type-light': this.state.type === 'light' });
+
+      var wrapper = ReactTooltip.supportedWrappers[this.props.wrapper];
+      if (!wrapper) wrapper = ReactTooltip.supportedWrappers['div'];
+
       if (html) {
-        return _react2.default.createElement('div', _extends({ className: tooltipClass + ' ' + extraClass
+        return _react2.default.createElement('wrapper', _extends({ className: tooltipClass + ' ' + extraClass
         }, ariaProps, {
           'data-id': 'tooltip',
-          style: this.props.style,
           dangerouslySetInnerHTML: { __html: placeholder } }));
       } else {
         return _react2.default.createElement(
-          'div',
+          'wrapper',
           _extends({ className: tooltipClass + ' ' + extraClass
           }, ariaProps, {
-            style: this.props.style,
             'data-id': 'tooltip' }),
           placeholder
         );
@@ -892,7 +865,9 @@ var ReactTooltip = (0, _staticMethods2.default)(_class = (0, _windowListener2.de
   offset: _react.PropTypes.object,
   multiline: _react.PropTypes.bool,
   border: _react.PropTypes.bool,
+  insecure: _react.PropTypes.bool,
   class: _react.PropTypes.string,
+  className: _react.PropTypes.string,
   id: _react.PropTypes.string,
   html: _react.PropTypes.bool,
   delayHide: _react.PropTypes.number,
@@ -908,10 +883,15 @@ var ReactTooltip = (0, _staticMethods2.default)(_class = (0, _windowListener2.de
   disable: _react.PropTypes.bool,
   scrollHide: _react.PropTypes.bool,
   resizeHide: _react.PropTypes.bool,
-  style: _react.PropTypes.object
+  wrapper: _react.PropTypes.string
 }, _class2.defaultProps = {
-  resizeHide: true
-}, _temp)) || _class) || _class) || _class) || _class;
+  insecure: true,
+  resizeHide: true,
+  wrapper: 'div'
+}, _class2.supportedWrappers = {
+  'div': _react2.default.DOM.div,
+  'span': _react2.default.DOM.span
+}, _temp)) || _class) || _class) || _class) || _class) || _class;
 
 /* export default not fit for standalone, it will exports {default:...} */
 
@@ -919,7 +899,7 @@ var ReactTooltip = (0, _staticMethods2.default)(_class = (0, _windowListener2.de
 module.exports = ReactTooltip;
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"./decorators/customEvent":4,"./decorators/isCapture":5,"./decorators/staticMethods":6,"./decorators/windowListener":7,"./style":9,"./utils/aria":10,"./utils/getPosition":11,"./utils/getTipContent":12,"classnames":1,"scrollparent":2}],9:[function(require,module,exports){
+},{"./decorators/customEvent":3,"./decorators/getEffect":4,"./decorators/isCapture":5,"./decorators/staticMethods":6,"./decorators/windowListener":7,"./style":9,"./utils/aria":10,"./utils/getPosition":11,"./utils/getTipContent":12,"./utils/nodeListToArray":13,"classnames":1}],9:[function(require,module,exports){
 'use strict';
 
 Object.defineProperty(exports, "__esModule", {
@@ -1256,10 +1236,8 @@ var getParent = function getParent(currentTarget) {
     currentParent = currentParent.parentElement;
   }
 
-  var useBoundingClientRect = currentParent && currentParent.style.position !== 'fixed';
-
-  var parentTop = useBoundingClientRect && currentParent.getBoundingClientRect().top || 0;
-  var parentLeft = useBoundingClientRect && currentParent.getBoundingClientRect().left || 0;
+  var parentTop = currentParent && currentParent.getBoundingClientRect().top || 0;
+  var parentLeft = currentParent && currentParent.getBoundingClientRect().left || 0;
 
   return { parentTop: parentTop, parentLeft: parentLeft };
 };
@@ -1300,5 +1278,22 @@ var _react2 = _interopRequireDefault(_react);
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
+},{}],13:[function(require,module,exports){
+"use strict";
+
+Object.defineProperty(exports, "__esModule", {
+  value: true
+});
+
+exports.default = function (nodeList) {
+  var length = nodeList.length;
+  if (nodeList.hasOwnProperty) {
+    return Array.prototype.slice.call(nodeList);
+  }
+  return new Array(length).fill().map(function (index) {
+    return nodeList[index];
+  });
+};
+
 },{}]},{},[8])(8)
 });
